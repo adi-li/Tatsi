@@ -14,7 +14,7 @@ protocol PickerViewController {
     
     var pickerViewController: TatsiPickerViewController? { get }
     
-    var config: TatsiConfig? { get }
+    var config: TatsiConfig { get }
     
     func finishPicking(with assets: [PHAsset])
     
@@ -28,8 +28,8 @@ extension PickerViewController where Self: UIViewController {
         return self.navigationController as? TatsiPickerViewController
     }
     
-    var config: TatsiConfig? {
-        return self.pickerViewController?.config
+    var config: TatsiConfig {
+        return self.pickerViewController?.config ?? TatsiConfig.default
     }
     
     var delegate: TatsiPickerViewControllerDelegate? {

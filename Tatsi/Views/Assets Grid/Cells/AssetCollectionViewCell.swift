@@ -60,13 +60,17 @@ final internal class AssetCollectionViewCell: UICollectionViewCell {
         view.isHidden = true
         view.backgroundColor = UIColor.white.withAlphaComponent(0.4)
         
-        let iconView = SelectionIconView()
-        iconView.translatesAutoresizingMaskIntoConstraints = false
-        iconView.tintColor = TatsiConfig.default.colors.link
+        let iconView = selectionIconView
         view.addSubview(iconView)
         view.bottomAnchor.constraint(equalTo: iconView.bottomAnchor, constant: 3).isActive = true
         view.trailingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 3).isActive = true
         
+        return view
+    }()
+
+    lazy private var selectionIconView: SelectionIconView = {
+        let view = SelectionIconView()
+        view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
     
@@ -112,12 +116,13 @@ final internal class AssetCollectionViewCell: UICollectionViewCell {
         NSLayoutConstraint.activate(constraints)
     }
     
-    internal func reloadContents() {
+    internal func reloadContents(with config: TatsiConfig) {
         guard self.shouldUpdateImage else {
             return
         }
         self.shouldUpdateImage = false
         self.startLoadingImage()
+        self.selectionIconView.tintColor = config.colors.checkIcon
     }
     
     override func prepareForReuse() {

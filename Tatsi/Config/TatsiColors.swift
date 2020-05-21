@@ -21,6 +21,9 @@ public protocol TatsiColors {
 
     /// The color for secondary labels like descriptions.
     var secondaryLabel: UIColor { get }
+
+    /// The color for check icon.
+    var checkIcon: UIColor { get }
 }
 
 /// Defines the default colors for Tatsi.
@@ -56,4 +59,6 @@ public struct TatsiDefaultColors: TatsiColors {
             return .gray
         }
     }()
+
+    public let checkIcon: UIColor = .systemBlue
 }

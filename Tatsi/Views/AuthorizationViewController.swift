@@ -16,7 +16,7 @@ final internal class AuthorizationViewController: UIViewController, PickerViewCo
         label.numberOfLines = 0
         label.textAlignment = .center
         label.font = UIFont.preferredFont(forTextStyle: .title2)
-        label.textColor = self.config?.colors.label ?? TatsiConfig.default.colors.label
+        label.textColor = self.config.colors.label
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -26,7 +26,7 @@ final internal class AuthorizationViewController: UIViewController, PickerViewCo
         label.numberOfLines = 0
         label.textAlignment = .center
         label.font = UIFont.preferredFont(forTextStyle: .body)
-        label.textColor = self.config?.colors.secondaryLabel ?? TatsiConfig.default.colors.secondaryLabel
+        label.textColor = self.config.colors.secondaryLabel
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -38,7 +38,7 @@ final internal class AuthorizationViewController: UIViewController, PickerViewCo
         button.translatesAutoresizingMaskIntoConstraints = false
         button.accessibilityIdentifier = "tatsi.button.openSettings"
 
-        let color = self.config?.colors.link ?? TatsiConfig.default.colors.link
+        let color = self.config.colors.link
         button.setTitleColor(color, for: .normal)
         return button
     }()
@@ -53,13 +53,13 @@ final internal class AuthorizationViewController: UIViewController, PickerViewCo
     }()
 
     override var preferredStatusBarStyle: UIStatusBarStyle {
-        return self.config?.preferredStatusBarStyle ?? .default
+        return self.config.preferredStatusBarStyle
     }
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        self.view.backgroundColor = self.config?.colors.background ?? TatsiConfig.default.colors.background
+        self.view.backgroundColor = self.config.colors.background
 
         self.setupView()
     }

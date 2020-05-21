@@ -107,5 +107,18 @@ final internal class LocalizableStrings {
     static var accessibilityActivateToShowAlbumList: String {
         return NSLocalizedString("tatsi-picker.accessibility.activate-to-show-album-list", tableName: self.tableName, bundle: self.bundle, value: "Activate to show album list", comment: "The accessibility hint the user gets on the album switcher")
     }
-    
+
+    static func numberOfSelectedItemsMessage(_ numberOfSelected: Int) -> String {
+        let localizedFormat: String
+        switch numberOfSelected {
+        case 0:
+            localizedFormat = ""
+        case 1:
+            localizedFormat = NSLocalizedString("tatsi-picker.view.grid.number-of-selected-items.one", tableName: self.tableName, bundle: self.bundle, value: "1 Item Selected", comment: "The label that is shown below the grid's view to display the number of selected items (only one item selected)")
+        default:
+            localizedFormat = NSLocalizedString("tatsi-picker.view.grid.number-of-selected-items.plural", tableName: self.tableName, bundle: self.bundle, value: "%d Items Selected", comment: "The label that is shown below the grid's view to display the number of selected items (more than one item selected)")
+        }
+
+        return String(format: localizedFormat, numberOfSelected)
+    }
 }

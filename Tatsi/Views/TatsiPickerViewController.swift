@@ -22,9 +22,12 @@ final public class TatsiPickerViewController: UINavigationController {
     }
     
     // MARK: - Initializers
+
+    internal var selectedAssets: [PHAsset]
     
-    public init(config: TatsiConfig = TatsiConfig.default) {
+    public init(config: TatsiConfig = TatsiConfig.default, selectedAssets: [PHAsset] = []) {
         self.config = config
+        self.selectedAssets = selectedAssets
         super.init(nibName: nil, bundle: nil)
 
         navigationBar.barTintColor = config.colors.background

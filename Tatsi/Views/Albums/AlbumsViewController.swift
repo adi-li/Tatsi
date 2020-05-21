@@ -38,7 +38,7 @@ final internal class AlbumsViewController: UITableViewController, PickerViewCont
     weak var delegate: AlbumsViewControllerDelegate?
 
     override var preferredStatusBarStyle: UIStatusBarStyle {
-        return self.config?.preferredStatusBarStyle ?? .default
+        return self.config.preferredStatusBarStyle
     }
     
     // MARK: - Private Properties
@@ -91,7 +91,7 @@ final internal class AlbumsViewController: UITableViewController, PickerViewCont
         cancelButtonItem.target = self
         cancelButtonItem.action = #selector(cancel(_:))
         cancelButtonItem.accessibilityIdentifier = "tatsi.button.cancel"
-        cancelButtonItem.tintColor = self.config?.colors.link ?? TatsiConfig.default.colors.link
+        cancelButtonItem.tintColor = self.config.colors.link
         self.navigationItem.rightBarButtonItem = cancelButtonItem
 
         self.navigationItem.backBarButtonItem?.accessibilityIdentifier = "tatsi.button.albums"
@@ -103,7 +103,7 @@ final internal class AlbumsViewController: UITableViewController, PickerViewCont
         self.tableView.rowHeight = 90
         self.tableView.separatorInset = UIEdgeInsets(top: 0, left: -10, bottom: 0, right: 0)
         self.tableView.separatorStyle = .none
-        self.tableView.backgroundColor = self.config?.colors.background ?? TatsiConfig.default.colors.background
+        self.tableView.backgroundColor = self.config.colors.background
         
         self.tableView.accessibilityIdentifier = "tatsi.tableView.albums"
         
@@ -113,7 +113,7 @@ final internal class AlbumsViewController: UITableViewController, PickerViewCont
     // MARK: - Accessibility
     
     public override func accessibilityPerformEscape() -> Bool {
-        if self.config?.singleViewMode == true {
+        if self.config.singleViewMode == true {
             return false
         } else {
             self.cancelPicking()
@@ -138,7 +138,7 @@ final internal class AlbumsViewController: UITableViewController, PickerViewCont
             newCategories.append(AlbumCategory(headerTitle: LocalizableStrings.albumsViewMyAlbumsHeader, albums: userAlbums))
         }
         
-        if self.config?.showSharedAlbums == true {
+        if self.config.showSharedAlbums == true {
             let sharedAlbums = self.fetchSharedAlbums()
             if !sharedAlbums.isEmpty {
                 newCategories.append(AlbumCategory(headerTitle: LocalizableStrings.albumsViewSharedAlbumsHeader, albums: sharedAlbums))
@@ -151,7 +151,7 @@ final internal class AlbumsViewController: UITableViewController, PickerViewCont
         let collectionResults = PHAssetCollection.fetchAssetCollections(with: PHAssetCollectionType.smartAlbum, subtype: PHAssetCollectionSubtype.albumRegular, options: nil)
         var collections = [PHAssetCollection]()
         collectionResults.enumerateObjects({ (collection, _, _) in
-            guard self.config?.isCollectionAllowed(collection) == true else {
+            guard self.config.isCollectionAllowed(collection) == true else {
                 return
             }
             collections.append(collection)
@@ -169,7 +169,7 @@ final internal class AlbumsViewController: UITableViewController, PickerViewCont
         let collectionResults = PHCollectionList.fetchTopLevelUserCollections(with: nil)
         var collections = [PHAssetCollection]()
         collectionResults.enumerateObjects({ (collection, _, _) in
-            guard let assetCollection = collection as? PHAssetCollection, self.config?.isCollectionAllowed(collection) == true else {
+            guard let assetCollection = collection as? PHAssetCollection, self.config.isCollectionAllowed(collection) == true else {
                 return
             }
             collections.append(assetCollection)
@@ -239,9 +239,9 @@ extension AlbumsViewController {
             fatalError("AlbumTableViewCell probably not registered")
         }
         cell.album = self.album(for: indexPath)
-        cell.reloadContents(with: self.config?.assetFetchOptions())
-        cell.accessoryType = (self.config?.singleViewMode ?? false) ? .none : .disclosureIndicator
-        cell.colors = self.config?.colors
+        cell.reloadContents(with: self.config.assetFetchOptions())
+        cell.accessoryType = self.config.singleViewMode ? .none : .disclosureIndicator
+        cell.colors = self.config.colors
         return cell
     }
     
@@ -272,7 +272,7 @@ extension AlbumsViewController {
             fatalError("AlbumsTableHeaderView probably not registered")
         }
         headerView.title = category.headerTitle
-        headerView.colors = self.config?.colors
+        headerView.colors = self.config.colors
         return headerView
     }
     

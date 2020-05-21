@@ -9,12 +9,25 @@
 import UIKit
 import Photos
 
-final internal class AssetsGridViewController: UICollectionViewController, PickerViewController {
+final internal class AssetsGridViewController: UIViewController, PickerViewController {
 
     // MARK: - Public Properties
 
     override var preferredStatusBarStyle: UIStatusBarStyle {
-        return self.config?.preferredStatusBarStyle ?? .default
+        return self.config.preferredStatusBarStyle
+    }
+
+    lazy var collectionView: UICollectionView = {
+        let flowLayout = UICollectionViewFlowLayout()
+        let view = UICollectionView(frame: self.view.bounds, collectionViewLayout: flowLayout)
+        view.delegate = self
+        view.dataSource = self
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    var collectionViewLayout: UICollectionViewLayout {
+        return collectionView.collectionViewLayout
     }
 
     // MARK: - Internal Properties
@@ -24,22 +37,24 @@ final internal class AssetsGridViewController: UICollectionViewController, Picke
             guard self.album != oldValue else {
                 return
             }
-            self.selectedAssets = []
             self.assets = []
-            self.collectionView?.reloadData()
+            self.collectionView.reloadData()
             
             self.configureForNewAlbum()
         }
     }
     
-    internal fileprivate(set) var selectedAssets = [PHAsset]() {
-        didSet {
+    internal fileprivate(set) var selectedAssets: [PHAsset] {
+        get { self.pickerViewController?.selectedAssets ?? [] }
+        set {
+            self.pickerViewController?.selectedAssets = newValue
             self.reloadDoneButtonState()
+            self.updateFooterText()
         }
     }
     
     var showingAlbums: Bool {
-        guard self.config?.singleViewMode == true, let titleView = self.navigationItem.titleView as? AlbumTitleView else {
+        guard self.config.singleViewMode == true, let titleView = self.navigationItem.titleView as? AlbumTitleView else {
             return false
         }
         return titleView.flipArrow
@@ -51,16 +66,16 @@ final internal class AssetsGridViewController: UICollectionViewController, Picke
         guard self.album.isUserLibrary, UIImagePickerController.isSourceTypeAvailable(UIImagePickerController.SourceType.camera) else {
             return false
         }
-        return self.config?.showCameraOption ?? false
+        return self.config.showCameraOption
     }
     
     fileprivate var emptyView: AlbumEmptyView? {
         didSet {
-            self.emptyView?.colors = self.config?.colors
-            self.collectionView?.backgroundView = self.emptyView
+            self.emptyView?.colors = self.config.colors
+            self.collectionView.backgroundView = self.emptyView
         }
     }
-    
+
     fileprivate let thumbnailCachingManager: PHCachingImageManager = {
         let manager = PHCachingImageManager()
         manager.allowsCachingHighQualityImages = false
@@ -81,13 +96,11 @@ final internal class AssetsGridViewController: UICollectionViewController, Picke
     
     fileprivate var assets: [PHAsset]? {
         didSet {
-            guard let collectionView = self.collectionView else {
-                return
-            }
+            let collectionView = self.collectionView
             DispatchQueue.main.async {
                 UIView.performWithoutAnimation({
                     collectionView.reloadSections(IndexSet(integer: 0))
-                    if self.config?.invertUserLibraryOrder == false && self.userScrolled == false && self.album.assetCollectionType == .smartAlbum {
+                    if self.config.invertUserLibraryOrder == false && self.userScrolled == false && self.album.assetCollectionType == .smartAlbum {
                         self.scrollToEnd()
                     }
                     for selectedAsset in self.selectedAssets {
@@ -105,15 +118,67 @@ final internal class AssetsGridViewController: UICollectionViewController, Picke
         buttonitem.target = self
         buttonitem.action = #selector(AssetsGridViewController.done(_:))
         buttonitem.accessibilityIdentifier = "tatsi.button.done"
-        buttonitem.tintColor = self.config?.colors.link ?? TatsiConfig.default.colors.link
+        buttonitem.tintColor = self.config.colors.link
         return buttonitem
     }()
+
+    lazy fileprivate var cancelButton: UIBarButtonItem = {
+        let buttonitem = self.pickerViewController?.customCancelButtonItem() ?? UIBarButtonItem(barButtonSystemItem: .cancel, target: nil, action: nil)
+        buttonitem.target = self
+        buttonitem.action = #selector(AssetsGridViewController.cancel(_:))
+        buttonitem.accessibilityIdentifier = "tatsi.button.cancel"
+        buttonitem.tintColor = self.config.colors.link
+        return buttonitem
+    }()
+
+    lazy fileprivate var footerLabel: UILabel = {
+        let view = UILabel()
+        view.textColor = config.colors.secondaryLabel
+        view.textAlignment = .center
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    lazy fileprivate var footerView: UIView = {
+        let view = UIView()
+        view.backgroundColor = config.colors.background
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.isHidden = config.maxNumberOfSelections == 1
+        view.addSubview(footerLabel)
+        return view
+    }()
+
+    fileprivate func setConstraints() {
+        let collectionView = self.collectionView
+        let footerLabel = self.footerLabel
+        let footerView = self.footerView
+        self.view.addSubview(collectionView)
+        self.view.addSubview(footerView)
+        let safeAreaLayoutGuide = self.view.compatibleSafeAreaLayoutGuide
+        NSLayoutConstraint.activate([
+            collectionView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor),
+            collectionView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor),
+            collectionView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor),
+
+            footerView.topAnchor.constraint(equalTo: collectionView.bottomAnchor),
+            footerView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor),
+            footerView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor),
+            footerView.bottomAnchor.constraint(equalTo: self.view.bottomAnchor),
+
+            footerLabel.topAnchor.constraint(equalTo: footerView.topAnchor),
+            footerLabel.leadingAnchor.constraint(equalTo: footerView.leadingAnchor),
+            footerLabel.trailingAnchor.constraint(equalTo: footerView.trailingAnchor),
+            footerLabel.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor),
+            footerLabel.heightAnchor.constraint(equalToConstant: 50),
+        ])
+    }
+
     
     // MARK: - Initializers
     
     init(album: PHAssetCollection) {
         self.album = album
-        super.init(collectionViewLayout: UICollectionViewFlowLayout())
+        super.init(nibName: nil, bundle: nil)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -124,19 +189,22 @@ final internal class AssetsGridViewController: UICollectionViewController, Picke
 
     override func viewDidLoad() {
         super.viewDidLoad()
+
+        self.setConstraints()
         
-        self.collectionView?.register(AssetCollectionViewCell.self, forCellWithReuseIdentifier: AssetCollectionViewCell.reuseIdentifier)
-        self.collectionView?.register(CameraCollectionViewCell.self, forCellWithReuseIdentifier: CameraCollectionViewCell.reuseIdentifier)
+        self.collectionView.register(AssetCollectionViewCell.self, forCellWithReuseIdentifier: AssetCollectionViewCell.reuseIdentifier)
+        self.collectionView.register(CameraCollectionViewCell.self, forCellWithReuseIdentifier: CameraCollectionViewCell.reuseIdentifier)
+
+        self.collectionView.backgroundColor = self.config.colors.background
         
-        self.collectionView?.backgroundColor = self.config?.colors.background ?? TatsiConfig.default.colors.background
-        
-        self.collectionView?.accessibilityIdentifier = "tatsi.collectionView.photosGrid"
+        self.collectionView.accessibilityIdentifier = "tatsi.collectionView.photosGrid"
         
         self.configureForNewAlbum()
         
-        self.collectionView?.allowsMultipleSelection = true
+        self.collectionView.allowsMultipleSelection = true
         
-        self.navigationItem.rightBarButtonItem = self.doneButton
+        self.reloadDoneButtonState()
+        self.updateFooterText()
         
         NotificationCenter.default.addObserver(self, selector: #selector(AssetsGridViewController.applicationDidBecomeActive(_:)), name: UIApplication.didBecomeActiveNotification, object: nil)
 
@@ -150,11 +218,7 @@ final internal class AssetsGridViewController: UICollectionViewController, Picke
         super.viewWillAppear(animated)
         let isRootModalViewController = self.navigationController?.viewControllers.first == self && self.presentingViewController != nil
         
-        let cancelButtonItem = self.pickerViewController?.customCancelButtonItem() ?? UIBarButtonItem(barButtonSystemItem: .cancel, target: nil, action: nil)
-        cancelButtonItem.target = self
-        cancelButtonItem.action = #selector(cancel(_:))
-        cancelButtonItem.tintColor = self.config?.colors.link ?? TatsiConfig.default.colors.link
-        cancelButtonItem.accessibilityIdentifier = "tatsi.button.cancel"
+        let cancelButtonItem = self.cancelButton
         
         self.navigationItem.leftBarButtonItem = isRootModalViewController ? cancelButtonItem : nil
     }
@@ -165,7 +229,7 @@ final internal class AssetsGridViewController: UICollectionViewController, Picke
         if showingAlbums {
             self.changeAlbum(nil)
         } else {
-            if self.config?.singleViewMode == true {
+            if self.config.singleViewMode == true {
                 self.cancelPicking()
             } else {
                 self.navigationController?.popViewController(animated: true)
@@ -226,8 +290,8 @@ final internal class AssetsGridViewController: UICollectionViewController, Picke
             albumsViewController.tableView.contentInset = UIEdgeInsets()
             albumsViewController.tableView.scrollIndicatorInsets = UIEdgeInsets()
         } else {
-            albumsViewController.tableView.contentInset = self.collectionView?.contentInset ?? UIEdgeInsets()
-            albumsViewController.tableView.scrollIndicatorInsets = self.collectionView?.contentInset ?? UIEdgeInsets()
+            albumsViewController.tableView.contentInset = self.collectionView.contentInset
+            albumsViewController.tableView.scrollIndicatorInsets = self.collectionView.contentInset
         }
         self.view.addSubview(albumsViewController.view)
         albumsViewController.didMove(toParent: self)
@@ -260,16 +324,14 @@ final internal class AssetsGridViewController: UICollectionViewController, Picke
     
     fileprivate func configureForNewAlbum() {
         self.title = self.album.localizedTitle
-        if let color = self.config?.colors.label {
-            navigationController?.navigationBar.titleTextAttributes = [.foregroundColor: color]
-        }
+        navigationController?.navigationBar.titleTextAttributes = [.foregroundColor: self.config.colors.label]
         self.startFetchingAssets()
         
         self.reloadDoneButtonState()
         
-        if self.config?.singleViewMode ?? false {
+        if self.config.singleViewMode {
             let titleView = AlbumTitleView()
-            titleView.colors = self.config?.colors
+            titleView.colors = self.config.colors
             titleView.title = self.album.localizedTitle
             titleView.frame = CGRect(x: 0, y: 0, width: 200, height: 44)
             titleView.addTarget(self, action: #selector(changeAlbum(_:)), for: .touchUpInside)
@@ -281,12 +343,23 @@ final internal class AssetsGridViewController: UICollectionViewController, Picke
     
     fileprivate func reloadDoneButtonState() {
         self.doneButton.isEnabled = !self.selectedAssets.isEmpty
+        if self.selectedAssets.isEmpty, self.navigationItem.leftBarButtonItem == nil {
+            self.navigationItem.rightBarButtonItem = self.cancelButton
+        } else {
+            self.navigationItem.rightBarButtonItem = self.doneButton
+        }
+    }
+
+    // MARK: - Label text
+
+    fileprivate func updateFooterText() {
+        self.footerLabel.text = LocalizableStrings.numberOfSelectedItemsMessage(selectedAssets.count)
     }
     
     // MARK: - Fetching
     
     fileprivate func startFetchingAssets() {
-        guard let fetchOptions = self.config?.assetFetchOptions() else {
+        guard let fetchOptions = self.config.assetFetchOptions() else {
             return
         }
         if !self.showCameraButton {
@@ -302,7 +375,7 @@ final internal class AssetsGridViewController: UICollectionViewController, Picke
                 allAssets.append(asset)
             })
             DispatchQueue.main.async {
-                if self?.config?.invertUserLibraryOrder == true && strongSelf.album.isUserLibrary {
+                if self?.config.invertUserLibraryOrder == true && strongSelf.album.isUserLibrary {
                     allAssets.reverse()
                 }
                 self?.assets = allAssets
@@ -334,7 +407,7 @@ final internal class AssetsGridViewController: UICollectionViewController, Picke
         if self.view.frame.width >= 480 {
             numberOfColumns = 7
         }
-        if let fixedNumberOfColumns = self.config?.numberOfColumns {
+        if let fixedNumberOfColumns = self.config.numberOfColumns {
             numberOfColumns = CGFloat(fixedNumberOfColumns)
         }
         let spacing: CGFloat = 1
@@ -354,7 +427,7 @@ final internal class AssetsGridViewController: UICollectionViewController, Picke
         guard let assets = self.assets else {
             return nil
         }
-        if self.config?.invertUserLibraryOrder == true {
+        if self.config.invertUserLibraryOrder == true {
             if indexPath.row == 0 && self.showCameraButton {
                 return nil
             }
@@ -364,7 +437,7 @@ final internal class AssetsGridViewController: UICollectionViewController, Picke
             }
         }
         
-        let index = indexPath.row - (self.showCameraButton && self.config?.invertUserLibraryOrder == true ? 1 : 0)
+        let index = indexPath.row - (self.showCameraButton && self.config.invertUserLibraryOrder == true ? 1 : 0)
         guard index < assets.count && index >= 0 else {
             return nil
         }
@@ -372,7 +445,7 @@ final internal class AssetsGridViewController: UICollectionViewController, Picke
     }
     
     fileprivate func addAsset(_ asset: PHAsset) {
-        if self.config?.invertUserLibraryOrder == true {
+        if self.config.invertUserLibraryOrder == true {
             self.assets?.insert(asset, at: 0)
         } else {
             self.assets?.append(asset)
@@ -384,15 +457,13 @@ final internal class AssetsGridViewController: UICollectionViewController, Picke
             self.selectedAssets.append(asset)
         }
         if let index = self.assets?.firstIndex(of: asset) {
-            let additionalIndex = self.config?.invertUserLibraryOrder == true && self.showCameraButton ? 1 : 0
+            let additionalIndex = self.config.invertUserLibraryOrder == true && self.showCameraButton ? 1 : 0
             self.collectionView.selectItem(at: IndexPath(item: index + additionalIndex, section: 0), animated: false, scrollPosition: UICollectionView.ScrollPosition())
         }
     }
 
     fileprivate func scrollToEnd() {
-        guard let collectionView = self.collectionView else {
-            return
-        }
+        let collectionView = self.collectionView
         let section = collectionView.numberOfSections - 1
         let item = collectionView.numberOfItems(inSection: section) - 1
         guard section >= 0, item >= 0 else {
@@ -401,18 +472,17 @@ final internal class AssetsGridViewController: UICollectionViewController, Picke
         let lastIndexPath = IndexPath(item: item, section: section)
         collectionView.scrollToItem(at: lastIndexPath, at: .bottom, animated: false)
     }
-    
 }
 
 // MARK: - UICollectionViewDataSource
 
-extension AssetsGridViewController {
+extension AssetsGridViewController: UICollectionViewDataSource {
     
-    override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         return self.numberOfCells
     }
     
-    override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         guard let asset = self.asset(for: indexPath) else {
             guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: CameraCollectionViewCell.reuseIdentifier, for: indexPath) as? CameraCollectionViewCell else {
                 fatalError("CameraCollectionViewCell should be registered")
@@ -425,33 +495,32 @@ extension AssetsGridViewController {
         cell.imageSize = self.thumbnailImageSize
         cell.imageManager = self.thumbnailCachingManager
         cell.asset = asset
-        cell.reloadContents()
+        cell.reloadContents(with: config)
         return cell
     }
-    
 }
 
 // MARK: - UICollectionViewDelegate
 
-extension AssetsGridViewController {
+extension AssetsGridViewController: UICollectionViewDelegate {
 
-    override func collectionView(_ collectionView: UICollectionView, shouldSelectItemAt indexPath: IndexPath) -> Bool {
-        guard self.selectedAssets.count < self.config?.maxNumberOfSelections ?? Int.max else {
+    func collectionView(_ collectionView: UICollectionView, shouldSelectItemAt indexPath: IndexPath) -> Bool {
+        guard self.selectedAssets.count < self.config.maxNumberOfSelections ?? Int.max else {
             UIAccessibility.post(notification: UIAccessibility.Notification.announcement, argument: LocalizableStrings.accessibilityAlertSelectionLimitReached)
             return false
         }
         return true
     }
     
-    override func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         if let asset = self.asset(for: indexPath) {
             if !self.selectedAssets.contains(asset) {
-                guard self.selectedAssets.count < self.config?.maxNumberOfSelections ?? Int.max else {
+                guard self.selectedAssets.count < self.config.maxNumberOfSelections ?? Int.max else {
                     UIAccessibility.post(notification: UIAccessibility.Notification.announcement, argument: LocalizableStrings.accessibilityAlertSelectionLimitReached)
                     return
                 }
                 self.selectedAssets.append(asset)
-                if let maxSelection = self.config?.maxNumberOfSelections, maxSelection == 1, self.config?.finishImmediatelyWithMaximumOfOne != false {
+                if let maxSelection = self.config.maxNumberOfSelections, maxSelection == 1, self.config.finishImmediatelyWithMaximumOfOne != false {
                     self.finishPicking(with: self.selectedAssets)
                 }
             }
@@ -464,7 +533,7 @@ extension AssetsGridViewController {
         }
     }
     
-    override func collectionView(_ collectionView: UICollectionView, didDeselectItemAt indexPath: IndexPath) {
+    func collectionView(_ collectionView: UICollectionView, didDeselectItemAt indexPath: IndexPath) {
         guard let asset = self.asset(for: indexPath), let index = self.selectedAssets.firstIndex(of: asset) else {
             return
         }
@@ -477,7 +546,7 @@ extension AssetsGridViewController {
 
 extension AssetsGridViewController {
 
-    override func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         self.userScrolled = true
     }
     
